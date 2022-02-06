@@ -19,7 +19,7 @@ Let's check what we have provisioned:
 
 ```bash
 kubectl get deployments -o wide
-kubectl get pods -o wide
+kubectl get pods -o wide --show-labels
 kubectl get service -o wide
 kubectl get ingress -o wide
 ```
