@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-a-canary
+  labels:
+    app: app-a-canary
+#    version: "2.0"
+data:
+  index.html: |-
+    <html>
+      <h1>Hello Canary!</h1>
+      <p>This is version 2.0</p>
+    </html>
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-a-canary
+spec:
+  selector:
+    matchLabels:
+      app: app-a-canary
+#      version: "2.0"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: app-a-canary
+#        version: "2.0"
+    spec:
+      containers:
+      - name: app-a-canary
+        image: nginx:alpine
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "50m"
+        ports:
+          - name: http
+            protocol: TCP
+            containerPort: 80
+        volumeMounts:
+          - mountPath: /usr/share/nginx/html/
+            name: config
+      volumes:
+        - name: config
+          configMap:
+            name: app-a-canary
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-a-canary
+  labels:
+    app: app-a-canary
+#    version: "2.0"
+spec:
+  type: ClusterIP
+  selector:
+    app: app-a-canary
+#    version: "2.0"
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 80
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-a-canary
+  labels:
+    app: app-a-canary
+#    version: "2.0"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "50"
+    nginx.ingress.kubernetes.io/canary-by-header: X-Canary
+spec:
+  rules:
+  - host: local.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app-a-canary
+            port:
+              name: http
